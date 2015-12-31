@@ -67,8 +67,10 @@ def pyre_getattr(expr, attr):
 
 
 def pyre_to_py_val(expr):
-    if isinstance(expr, (PyreNumber, PyreString)):
+    if isinstance(expr, PyreNumber):
         return expr.value
+    elif isinstance(expr, PyreString):
+        return eval('"%s"' % expr.value)
     elif isinstance(expr, (PyreList)):
         return [pyre_to_py_val(x) for x in expr.values]
     elif isinstance(expr, (PyrePyFunc)):
@@ -120,6 +122,8 @@ def pyre_eval(expr, state):
                 result.append(pyre_eval(expr.body, state))
             except BreakError:
                 break
+            except ReturnError as e:
+                return e.value
         return result
     elif isinstance(expr, DefExpr):
         def _wrapper(*args):
@@ -130,7 +134,10 @@ def pyre_eval(expr, state):
                 raise TypeError('Not enough arguments supplied!')
             dstate = state.scope_down()
             dstate.locals.update(args)
-            return pyre_eval(expr.body, dstate)
+            try:
+                return pyre_eval(expr.body, dstate)
+            except ReturnError as e:
+                return e.value
         return PyrePyFunc(_wrapper)
     elif isinstance(expr, TryExpr):
         try:
@@ -139,7 +146,8 @@ def pyre_eval(expr, state):
             raise
         except BreakError:
             raise
-        except:
+        except Exception as e:
+            print(e)
             return pyre_eval(expr.exceptbody, state)
     elif isinstance(expr, BreakExpr):
         raise BreakError()
@@ -151,7 +159,3 @@ def pyre_eval(expr, state):
     else:
         raise TypeError("Can't eval object of type '%s'!" %
                         type(expr).__name__)
-
-
-def pyre_exec_string(string):
-    return pyre_eval(parse(string), global_state.scope_down())

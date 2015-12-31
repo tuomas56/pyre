@@ -1,0 +1,47 @@
+do
+	let justify = def (text, n) do
+		let words = text.split(" ").reverse!
+		let lines = list!
+
+		#first pass, add words to lines, ensuring they
+		#don't pass the line limit and they have at least one space between them
+		while words.len!.gt(0) do
+			let remaining = n
+			let line = list!
+
+			while remaining.gt(0).and(words.len!.gt(0)) do
+				if words.get(-1).len!.add(1).gt(remaining)
+					break
+				else do
+					line.append(words.pop!.concat(" "))
+					let remaining = remaining.sub(line.get(-1).len!)
+				end
+			end
+			lines.append(line)
+		end
+
+		#second pass, add spaces to make the line lengths match up
+		let i = 0
+		while i.lt(lines.len!) do
+			let line = lines.get(i)
+			let remaining = n.sub(line.map(def (x) x.len!).apply(sum))
+			let avg_spacing = remaining.div(line.len!).int!
+			let j = 0
+
+			while j.lt(line.len!.sub(1)) do
+				line.set(j, line.get(j).concat(" ".rep(avg_spacing)))
+				let j = j.add(1)
+			end
+
+			let remainder = remaining.sub(avg_spacing.mul(line.len!.sub(1)))
+			line.set(-1, " ".rep(remainder).concat(line.get(-1)))
+
+			lines.set(i, line.join(""))
+			let i = i.add(1)
+		end
+
+		lines.join("\n")
+	end
+
+	print(justify(input("enter some text: "), 20))
+end

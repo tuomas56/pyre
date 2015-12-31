@@ -8,6 +8,27 @@ An implementation of the basic object-space and native Pyre types.
 
 from pyre.asteval import *
 
+def pyre_truthy(expr):
+    if isinstance(expr, PyreNumber) and expr.value == 0:
+        return False
+    return True
+
+def pyre_call(expr, args):
+    return pyre_getattr(expr, '__call__')(*args)
+
+def pyre_getattr(expr, attr):
+    if pyre_hasattr(expr, '__getallattr__'):
+        return pyre_call(expr.dict['__getallattr__'], attr)
+    elif pyre_hasattr(expr, attr):
+        return expr.dict[attr]
+    elif pyre_hasattr(expr, '__getattr__'):
+        return pyre_call(expr.dict['__getattr__'], attr)
+    else:
+        raise AttributeError(
+            'object "%s" has no attribute "%s"!' % (expr, attr))
+
+def pyre_hasattr(expr, attr):
+    return attr in expr.dict
 
 class PyrePyFunc:
 
@@ -63,6 +84,22 @@ class PyreString(PyreObject):
         self.eq_vars.append('value')
         self.dict['len'] = PyrePyFunc(self.len)
         self.dict['num'] = PyrePyFunc(self.num)
+        self.dict['split'] = PyrePyFunc(self.split)
+        self.dict['concat'] = PyrePyFunc(self.concat)
+        self.dict['rep'] = PyrePyFunc(self.rep)
+        self.dict['list'] = PyrePyFunc(self.list)
+
+    def list(self):
+        return PyreList([PyreString(x) for x in self.value])
+
+    def concat(self, other):
+        return PyreString(self.value + other.value)
+
+    def rep(self, times):
+        return PyreString(self.value * int(times.value))
+
+    def split(self, sep):
+        return PyreList([PyreString(x) for x in self.value.split(sep.value)])
 
     def num(self):
         return PyreNumber(float(self.value))
@@ -82,9 +119,26 @@ class PyreList(PyreObject):
         self.eq_vars.append('values')
         self.dict['get'] = PyrePyFunc(self.get)
         self.dict['set'] = PyrePyFunc(self.set)
+        self.dict['append'] = PyrePyFunc(self.append)
+        self.dict['pop'] = PyrePyFunc(self.pop)
+        self.dict['join'] = PyrePyFunc(self.join)
         self.dict['map'] = PyrePyFunc(self.map)
         self.dict['len'] = PyrePyFunc(self.len)
         self.dict['filter'] = PyrePyFunc(self.filter)
+        self.dict['reverse'] = PyrePyFunc(self.reverse)
+
+    def reverse(self):
+        return PyreList(self.values[::-1])
+
+    def append(self, object):
+        self.values.append(object)
+        return object
+
+    def join(self, sep):
+        return PyreString(sep.value.join(map(str, self.values)))
+
+    def pop(self):
+        return self.values.pop()
 
     def get(self, index):
         return self.values[int(index.value)]
@@ -93,7 +147,7 @@ class PyreList(PyreObject):
         self.values[int(index.value)] = value
 
     def len(self):
-        return PyreNumber(len(self.value))
+        return PyreNumber(len(self.values))
 
     def map(self, func):
         return PyreList([pyre_call(func, [x]) for x in self.values])

@@ -27,19 +27,15 @@ def tok(type, value=None):
 
 token_specs = [
     spec(
-        'comment',
-        r'#.*$',
-        re.MULTILINE & re.DOTALL),
-    spec(
         'keyword',
         r'(if)|(do)|(else)|(end)|(while)|(def)|(let)|'
         r'(try)|(except)|(break)|(return)'),
     spec(
         'floatn',
-        r'[0-9]+\.[0-9]+'),
+        r'-?[0-9]+\.[0-9]+'),
     spec(
         'intn',
-        r'[0-9]+'),
+        r'-?[0-9]+'),
     spec(
         'ident',
         r'[A-Za-z_\$][A-Za-z_0-9\$]*'),
@@ -76,14 +72,18 @@ token_types = [spec[0] for spec in token_specs]
 
 ignore_tokens = [
     'ws',
-    'nl',
-    'comment'
+    'nl'
 ]
 
 tokenizer = make_tokenizer(token_specs)
 
 
+def remove_comments(s):
+    return re.sub('#.*$', '', s, flags=re.MULTILINE)
+
+
 def tokenize(s):
+    s = remove_comments(s)
     return list(filter(lambda x: x.type not in ignore_tokens, tokenizer(s)))
 
 

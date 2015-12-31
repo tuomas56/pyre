@@ -1,0 +1,18 @@
+do
+	let get = def (prompt, validate)
+		while True
+			try
+				return validate(input(prompt)) #early return stops loop
+			except
+				print("Invalid input, please retry.") #if not correct, iterate again
+
+	let reverse = def (value)
+		value.list!.reverse!.join("")
+
+	print(get("enter something to be reversed: ", reverse))
+
+	let numify = def (value)
+		value.num!
+
+	print(get("enter a number: ", numify))
+end

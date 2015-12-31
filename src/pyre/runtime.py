@@ -9,6 +9,7 @@ An implementation of Pyre's builtin functions.
 from pyre.asteval import pyre_eval, pyre_to_py_val, State
 from pyre.objspace import (
     PyreString,
+    PyreNumber,
     Pyre_TRUE,
     Pyre_FALSE,
     PyrePyFunc,
@@ -43,7 +44,11 @@ def _quit(state):
 
 @builtin_func(global_state, 'list')
 def _list(state, *args):
-    return PyreList(args)
+    return PyreList(list(args))
+
+@builtin_func(global_state, 'sum')
+def _sum(state, list):
+    return PyreNumber(sum([x.value for x in list.values]))
 
 global_state.locals['True'] = Pyre_TRUE
 global_state.locals['False'] = Pyre_FALSE

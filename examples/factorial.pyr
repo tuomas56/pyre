@@ -1,0 +1,21 @@
+do
+	#Pyre runs on top of Python
+	#Python has no TRO, so neither does Pyre
+	let factorial_recursive = def (n)
+		if n.equals(1)
+			1
+		else
+			n.mul(factorial_recursive(n.sub(1)))
+
+	let factorial_iterative = def (n) do
+		let result = 1
+		while n.gt(1) do
+			let result = result.mul(n)
+			let n = n.sub(1)
+		end
+		result
+	end
+
+	print(factorial_recursive(input("recursive: ").num!))
+	print(factorial_iterative(input("iterative: ").num!))
+end
