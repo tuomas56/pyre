@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""
+(c) Tuomas Laakkonen 2015, under the MIT license.
+
+ipyre
+
+A simple interface to Pyre, including a basic REPL.
+"""
+
+from argparse import ArgumentParser
+import sys
+from pyre.runtime import global_state
+from pyre.asteval import pyre_eval, pyre_exec_string
+from pyre.parser import parse
+import platform
+
+
+def repl():
+    print("iPyre V0.1.0, running Pyre V0.1.0")
+    print("Using ASTObjectSpace, with underlying interpreter: %s %s" %
+          (platform.python_implementation(), platform.python_version()))
+    print(
+        "Running on %s, version %s." %
+        (platform.system(), platform.release()))
+    state = global_state.scope_down()
+    while True:
+        line = [input(">>> ")]
+        while line[-1] != "":
+            line.append(input("... "))
+        try:
+            print(pyre_eval(parse('\n'.join(line)), state))
+        except Exception as e:
+            print(e)
+
+
+def main(argv):
+    parser = ArgumentParser()
+    parser.add_argument(
+        '-a',
+        '--action',
+        choices=(
+            'repl',
+            'stdin',
+            'load'),
+        default='repl')
+    parser.add_argument('-f', '--file')
+    args = parser.parse_args(argv[1:])
+
+    if args.action == 'repl':
+        repl()
+    elif args.action == 'file':
+        with open(args.file, 'r') as f:
+            pyre_exec_string(f.read())
+    elif args.action == 'stdin':
+        pyre_exec_string(sys.stdin.read())
+
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
