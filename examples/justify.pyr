@@ -26,9 +26,7 @@ do
 		end
 
 		#second pass, add spaces to make the line lengths match up
-		let i = 0
-		while i.lt(lines.len!) do
-			let line = lines.get(i)
+		let lines = for line in lines do
 			let remaining = n.sub(line.map(def (x) x.len!).apply(sum))
 			let avg_spacing = remaining.div(line.len!).int!
 			let j = 0
@@ -41,8 +39,7 @@ do
 			let remainder = remaining.sub(avg_spacing.mul(line.len!.sub(1)))
 			line.set(-1, " ".rep(remainder).concat(line.get(-1)))
 
-			lines.set(i, line.join(""))
-			let i = i.add(1)
+			line.join("")
 		end
 
 		lines.join("\n")

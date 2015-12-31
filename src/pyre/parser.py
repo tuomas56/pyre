@@ -29,7 +29,7 @@ token_specs = [
     spec(
         'keyword',
         r'((if)|(do)|(else)|(end)|(while)|(def)|(let)|'
-        r'(try)|(except)|(break)|(return))(?=\s)'),
+        r'(try)|(except)|(break)|(return)|(for)|(in))(?=\s)'),
     spec(
         'floatn',
         r'-?[0-9]+\.[0-9]+'),
@@ -177,6 +177,9 @@ class WhileExpr(AstNode):
     def __str__(self):
         return 'while %s %s' % (self.cond, self.body)
 
+class ForExpr(AstNode):
+    def __init__(self, var, expr, body):
+        self.var, self.expr, self.body = var, expr, body
 
 class DefExpr(AstNode):
 
@@ -286,8 +289,10 @@ breakexpr = skip(keyword('break')) >> (lambda t: BreakExpr())
 
 returnexpr = skip(keyword('return')) + expr >> (lambda t: ReturnExpr(t))
 
+forexpr = skip(keyword('for')) + ident + skip(keyword('in')) + expr + expr >> (lambda t: ForExpr(*t))
+
 expr.define((breakexpr | returnexpr | call | brackets | block |
-             ifexpr | varexpr | whileexpr | defexpr | tryexpr))
+             ifexpr | varexpr | whileexpr | defexpr | tryexpr | forexpr))
 
 toplevel = expr + skip(eof)
 

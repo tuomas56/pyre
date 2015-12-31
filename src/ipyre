@@ -15,6 +15,7 @@ from pyre.parser import parse
 import platform
 
 def pyre_exec_string(string):
+    load_stdlib()
     return pyre_eval(parse(string), global_state.scope_down())
 
 def repl():

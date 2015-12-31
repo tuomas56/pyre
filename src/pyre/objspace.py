@@ -126,6 +126,7 @@ class PyreList(PyreObject):
         self.dict['len'] = PyrePyFunc(self.len)
         self.dict['filter'] = PyrePyFunc(self.filter)
         self.dict['reverse'] = PyrePyFunc(self.reverse)
+        self.dict['__iter__'] = PyrePyFunc(lambda: self.values)
 
     def reverse(self):
         return PyreList(self.values[::-1])

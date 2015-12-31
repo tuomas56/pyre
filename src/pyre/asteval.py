@@ -24,19 +24,48 @@ from pyre.parser import (
     DefExpr,
     TryExpr,
     ReturnExpr,
-    BreakExpr)
+    BreakExpr,
+    ForExpr)
 from pyre.objspace import *
 from functools import partial
 import inspect
+
+class StateDict:
+
+    def __init__(self, parent):
+        self.items = {}
+        self.parent = parent
+
+    def __getitem__(self, name):
+        if name in self.items:
+            return self.items[name]
+        else:
+            return self.parent[name]
+
+    def keys(self):
+        return self.parent.keys()
+
+    def update(self, other):
+        for k, v in other.items():
+            self[k] = v
+
+    def __setitem__(self, name, value):
+        if name in self.parent.keys():
+            self.parent[name] = value
+        else:
+            self.items[name] = value
 
 
 class State:
 
     def __init__(self, parent=None, locals=None):
         self.parent = parent
-        self.locals = locals if locals is not None else {}
+        self.locals = locals if locals is not None else StateDict({})
 
     def scope_down(self):
+        return State(self, StateDict(self.locals))
+
+    def copy(self):
         return State(self, self.locals.copy())
 
 
@@ -124,7 +153,16 @@ def pyre_eval(expr, state):
                 break
             except ReturnError as e:
                 return e.value
-        return result
+        return PyreList(result)
+    elif isinstance(expr, ForExpr):
+        result = []
+        newstate = state.scope_down()
+        for x in pyre_call(pyre_getattr(pyre_eval(expr.expr, state), '__iter__'), []):
+            newstate.locals[expr.var.value] = x
+            result.append(pyre_eval(expr.body, newstate))
+        newstate.locals.parent.update(newstate.locals.items)
+        state.locals = newstate.locals.parent
+        return PyreList(result)
     elif isinstance(expr, DefExpr):
         def _wrapper(*args):
             if len(args) > len(expr.args):

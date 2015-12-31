@@ -12,7 +12,7 @@ do
 		else
 			n.mul(factorial_recursive(n.sub(1)))
 
-	let factorial_iterative = def (n) do
+	let factorial_iterative1 = def (n) do
 		let result = 1
 		while n.gt(1) do
 			let result = result.mul(n)
@@ -21,6 +21,14 @@ do
 		result
 	end
 
+	let factorial_iterative2 = def (n) do
+		let result = 1
+		for i in range(2, n.add(1))
+			let result = result.mul(i)
+		result
+	end
+
 	print(factorial_recursive(input("recursive: ").num!))
-	print(factorial_iterative(input("iterative: ").num!))
+	print(factorial_iterative1(input("iterative1: ").num!))
+	print(factorial_iterative2(input("iterative2: ").num!))
 end

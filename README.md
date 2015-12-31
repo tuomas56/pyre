@@ -40,10 +40,10 @@ Done:
 * Attribute access
 * Variable assignment and scoping
 * Blocks, return and break
+* For loops
 
 Todo:
 
-* For loops
 * Generators
 * Error handling (specific errors)
 * Immutable and mutable variable modifiers
