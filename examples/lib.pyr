@@ -1,0 +1,9 @@
+
+#(c) Tuomas Laakkonen 2015, under the MIT license.
+#A sample Pyre library. It exports a simple API, which
+#then is turned into a module by the import system.
+
+do
+	let triple = def (n)
+		n.mul(3)
+end

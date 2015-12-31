@@ -1,3 +1,8 @@
+#!/usr/bin/env ipyre -a load -f
+
+#(c) Tuomas Laakkonen 2015, under the MIT license.
+#An example program that has the user enter some text and splits it into
+#lines of size twenty, justifing it.
 do
 	let justify = def (text, n) do
 		let words = text.split(" ").reverse!

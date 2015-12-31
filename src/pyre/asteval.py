@@ -146,8 +146,7 @@ def pyre_eval(expr, state):
             raise
         except BreakError:
             raise
-        except Exception as e:
-            print(e)
+        except:
             return pyre_eval(expr.exceptbody, state)
     elif isinstance(expr, BreakExpr):
         raise BreakError()

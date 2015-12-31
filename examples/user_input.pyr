@@ -1,3 +1,7 @@
+#!/usr/bin/env ipyre -a load -f
+
+#(c) Tuomas Laakkonen 2015, under the MIT license.
+#An example program of how to get user input with validation.
 do
 	let get = def (prompt, validate)
 		while True

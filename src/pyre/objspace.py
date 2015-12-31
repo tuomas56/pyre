@@ -159,7 +159,6 @@ class PyreList(PyreObject):
     def __str__(self):
         return "[%s]" % (', '.join(map(str, self.values)))
 
-
 class PyreNumber(PyreObject):
 
     def __init__(self, value):

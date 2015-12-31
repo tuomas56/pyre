@@ -28,8 +28,8 @@ def tok(type, value=None):
 token_specs = [
     spec(
         'keyword',
-        r'(if)|(do)|(else)|(end)|(while)|(def)|(let)|'
-        r'(try)|(except)|(break)|(return)'),
+        r'((if)|(do)|(else)|(end)|(while)|(def)|(let)|'
+        r'(try)|(except)|(break)|(return))'),
     spec(
         'floatn',
         r'-?[0-9]+\.[0-9]+'),

@@ -9,7 +9,7 @@ A simple interface to Pyre, including a basic REPL.
 
 from argparse import ArgumentParser
 import sys
-from pyre.runtime import global_state
+from pyre.runtime import global_state, load_stdlib
 from pyre.asteval import pyre_eval
 from pyre.parser import parse
 import platform
@@ -24,6 +24,7 @@ def repl():
     print(
         "Running on %s, version %s." %
         (platform.system(), platform.release()))
+    load_stdlib()
     state = global_state.scope_down()
     while True:
         line = [input(">>> ")]

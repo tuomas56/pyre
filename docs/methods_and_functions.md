@@ -130,7 +130,7 @@ Applies a function to each element in the array, returning the accumulated value
 
 ####List#filter
 
-Applies a function to each element in the array, returning only those, for which the function returns a truthy value.
+Applies a function to each element in the array, returning only those for which the function returns a truthy value.
 
 ###True
 

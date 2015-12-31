@@ -1,3 +1,8 @@
+#!/usr/bin/env ipyre -a load -f 
+
+#(c) Tuomas Laakkonen 2015, under the MIT license.
+#An example program which computes factorials, using
+#both the iterative and naive recursive algorithm.
 do
 	#Pyre runs on top of Python
 	#Python has no TRO, so neither does Pyre
