@@ -29,7 +29,7 @@ token_specs = [
     spec(
         'keyword',
         r'((if)|(do)|(else)|(end)|(while)|(def)|(let)|'
-        r'(try)|(except)|(break)|(return))'),
+        r'(try)|(except)|(break)|(return))(?=\s)'),
     spec(
         'floatn',
         r'-?[0-9]+\.[0-9]+'),
@@ -293,4 +293,4 @@ toplevel = expr + skip(eof)
 
 
 def parse(s):
-    return toplevel.parse(tokenize(s))
+    return toplevel.parse(tokenize(s + "\n"))

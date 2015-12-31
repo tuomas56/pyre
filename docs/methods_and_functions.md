@@ -132,6 +132,20 @@ Applies a function to each element in the array, returning the accumulated value
 
 Applies a function to each element in the array, returning only those for which the function returns a truthy value.
 
+###Buffer objects
+
+####Buffer#read
+
+Reads from the buffer, if not argument is provided, everything is read.
+
+####Buffer#write
+
+Writes to the buffer.
+
+####Buffer#close
+
+Closes the buffer.
+
 ###True
 
 A singleton value, exactly equal to 1.
@@ -159,3 +173,15 @@ Constructs a list from its arguments.
 ###sum(list)
 
 Sums an number list.
+
+###import(name)
+
+Imports a module, relatively. This replaces dots with slashes,
+appends '.pyr' and then reads the file, evals it. Any variables not in
+the global scope before will be hoisted into a module object as attributes. 
+It behaves almost exactly like Python's import: everything will be evaluated.
+It returns a module object like Node's require.
+
+###object!
+
+Constructs a blank object.

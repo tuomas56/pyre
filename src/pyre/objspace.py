@@ -170,12 +170,16 @@ class PyreNumber(PyreObject):
         self.dict['mul'] = PyrePyFunc(self.mul)
         self.dict['div'] = PyrePyFunc(self.div)
         self.dict['pow'] = PyrePyFunc(self.pow)
+        self.dict['mod'] = PyrePyFunc(self.mod)
         self.dict['gt'] = PyrePyFunc(self.gt)
         self.dict['lt'] = PyrePyFunc(self.lt)
         self.dict['or'] = PyrePyFunc(self.lor)
         self.dict['and'] = PyrePyFunc(self.land)
         self.dict['not'] = PyrePyFunc(self.lnot)
         self.dict['int'] = PyrePyFunc(self.int)
+
+    def mod(self, other):
+        return PyreNumber(self.value % other.value)
 
     def int(self):
         return PyreNumber(int(self.value))
