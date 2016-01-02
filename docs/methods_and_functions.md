@@ -22,6 +22,10 @@ Sets an attribute on an object.
 
 Gets an attribute of an object.
 
+####Object#dir
+
+List the attributes of an object
+
 ###Number objects
 
 ####Number#add

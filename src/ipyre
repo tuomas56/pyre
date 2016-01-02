@@ -34,7 +34,7 @@ def repl():
         try:
             print(pyre_eval(parse('\n'.join(line)), state))
         except Exception as e:
-            print(e)
+            raise
 
 
 def main(argv):

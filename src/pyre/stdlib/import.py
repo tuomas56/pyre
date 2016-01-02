@@ -7,11 +7,5 @@ from pyre.parser import parse, tokenize
 def _import(state, name):
 	newstate = state.scope_down()
 	with open(name.value.replace('.', '/') + '.pyr', 'r') as f:
-		pyre_eval(parse(f.read()), newstate)
-
-	module = PyreObject()
-	for k, v in newstate.locals.items():
-		if k not in state.locals:
-			module._setattr(PyreString(k), v)
-
+		module = pyre_eval(parse(f.read()), newstate)
 	return module

@@ -18,8 +18,9 @@ from pyre.objspace import (
 from pyre.parser import parse
 from functools import partial
 import sys
+import random
 
-STDLIB_PY_MODULES = ['io', 'list', 'import']
+STDLIB_PY_MODULES = ['io', 'list', 'import', 'exts']
 STDLIB_PYRE_MODULES = []
 
 global_state = State()
@@ -37,6 +38,10 @@ def _eval(state, str):
 @builtin_func(global_state, 'object')
 def _object(state):
     return PyreObject()
+
+@builtin_func(global_state, 'random')
+def _random(state):
+    return PyreNumber(random.random())
 
 global_state.locals['True'] = Pyre_TRUE
 global_state.locals['False'] = Pyre_FALSE

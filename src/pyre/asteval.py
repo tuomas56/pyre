@@ -25,7 +25,8 @@ from pyre.parser import (
     TryExpr,
     ReturnExpr,
     BreakExpr,
-    ForExpr)
+    ForExpr,
+    ModuleExpr)
 from pyre.objspace import *
 from functools import partial
 import inspect
@@ -54,6 +55,13 @@ class StateDict:
             self.parent[name] = value
         else:
             self.items[name] = value
+
+    def __iter__(self):
+        for name in self.items.keys():
+            yield name, self.items[name]
+        for name in self.parent.keys():
+            if name not in self.items.keys():
+                yield name, self.parent[name]
 
 
 class State:
@@ -104,6 +112,13 @@ def pyre_to_py_val(expr):
         return [pyre_to_py_val(x) for x in expr.values]
     elif isinstance(expr, (PyrePyFunc)):
         return expr.dict['__call__']
+    elif isinstance(expr, PyreBuffer):
+        return expr.value
+    elif isinstance(expr, PyreObject):
+        obj = object()
+        for name, val in expr.dict.items():
+            setattr(obj, name, pyre_to_py_val(val))
+        return obj
 
 
 class BreakError(Exception):
@@ -139,10 +154,13 @@ def pyre_eval(expr, state):
     elif isinstance(expr, String):
         return PyreString(expr.value)
     elif isinstance(expr, Block):
+        newstate = state.scope_down()
         try:
-            vals = [None] + [pyre_eval(e, state) for e in expr.value]
+            vals = [None] + [pyre_eval(e, newstate) for e in expr.value]
         except ReturnError as e:
             return e.value
+        newstate.locals.parent.update(newstate.locals.items)
+        state.locals = newstate.locals.parent
         return vals[-1]
     elif isinstance(expr, WhileExpr):
         result = []
@@ -151,15 +169,16 @@ def pyre_eval(expr, state):
                 result.append(pyre_eval(expr.body, state))
             except BreakError:
                 break
-            except ReturnError as e:
-                return e.value
         return PyreList(result)
     elif isinstance(expr, ForExpr):
         result = []
         newstate = state.scope_down()
         for x in pyre_call(pyre_getattr(pyre_eval(expr.expr, state), '__iter__'), []):
             newstate.locals[expr.var.value] = x
-            result.append(pyre_eval(expr.body, newstate))
+            try:
+                result.append(pyre_eval(expr.body, newstate))
+            except BreakError:
+                break
         newstate.locals.parent.update(newstate.locals.items)
         state.locals = newstate.locals.parent
         return PyreList(result)
@@ -172,10 +191,7 @@ def pyre_eval(expr, state):
                 raise TypeError('Not enough arguments supplied!')
             dstate = state.scope_down()
             dstate.locals.update(args)
-            try:
-                return pyre_eval(expr.body, dstate)
-            except ReturnError as e:
-                return e.value
+            return pyre_eval(expr.body, dstate)
         return PyrePyFunc(_wrapper)
     elif isinstance(expr, TryExpr):
         try:
@@ -193,6 +209,13 @@ def pyre_eval(expr, state):
     elif isinstance(expr, VarExpr):
         state.locals[expr.var] = pyre_eval(expr.value, state)
         return state.locals[expr.var]
+    elif isinstance(expr, ModuleExpr):
+        newstate = state.scope_down()
+        body = pyre_eval(expr.body, newstate)
+        mod = PyreModule()
+        for name, val in newstate.locals.items.items():
+            mod._setattr(PyreString(name), val)
+        return mod
     else:
         raise TypeError("Can't eval object of type '%s'!" %
                         type(expr).__name__)

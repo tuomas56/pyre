@@ -7,6 +7,9 @@ An implementation of the basic object-space and native Pyre types.
 """
 
 from pyre.asteval import *
+import collections
+import io
+from functools import partial
 
 def pyre_truthy(expr):
     if isinstance(expr, PyreNumber) and expr.value == 0:
@@ -30,12 +33,48 @@ def pyre_getattr(expr, attr):
 def pyre_hasattr(expr, attr):
     return attr in expr.dict
 
+def pyre_to_py_val(expr):
+    if isinstance(expr, PyreNumber):
+        return expr.value
+    elif isinstance(expr, PyreString):
+        return eval('"%s"' % expr.value)
+    elif isinstance(expr, (PyreList)):
+        return [pyre_to_py_val(x) for x in expr.values]
+    elif isinstance(expr, (PyrePyFunc)):
+        return expr.dict['__call__']
+    elif isinstance(expr, PyreBuffer):
+        return expr.value
+    elif isinstance(expr, PyreObject):
+        obj = object()
+        for name, val in expr.dict.items():
+            setattr(obj, name, pyre_to_py_val(val))
+        return obj
+
+def pyre_to_pyre_val(val):
+    if callable(val):
+        def _wrapper(*args):
+            return pyre_to_pyre_val(val(*map(pyre_to_py_val, args)))
+        return PyrePyFunc(_wrapper)
+    elif isinstance(val, str):
+        return PyreString(val)
+    elif isinstance(val, (int, float)):
+        return PyreNumber(float(val))
+    elif isinstance(val, io.IOBase):
+        return PyreBuffer(val)
+    elif isinstance(val, collections.Iterable):
+        return PyreList([pyre_to_pyre_val(v) for v in val])
+    else:
+        obj = PyreObject()
+        names = [name for name in dir(val) if not name.startswith('__')]
+        for name, val in zip(names, map(partial(getattr, val), names)):
+            obj._setattr(PyreString(name), pyre_to_pyre_val(val))
+
+
 class PyrePyFunc:
 
     def __init__(self, func):
         self.dict = {}
         self.dict['__call__'] = func
-
 
 class PyreObject:
 
@@ -46,7 +85,11 @@ class PyreObject:
         self.dict['equals'] = PyrePyFunc(self.equals)
         self.dict['apply'] = PyrePyFunc(self.apply)
         self.dict['str'] = PyrePyFunc(self.str)
+        self.dict['dir'] = PyrePyFunc(self.dir)
         self.eq_vars = []
+
+    def dir(self):
+        return pyre_to_pyre_val(self.dict.keys())
 
     def str(self):
         return PyreString(str(self))
@@ -75,6 +118,29 @@ class PyreObject:
     def _getattr(self, name):
         return self.dict[name.value]
 
+
+class PyreModule(PyreObject):
+    pass
+
+
+class PyreBuffer(PyreObject):
+    def __init__(self, value):
+        super().__init__()
+        self.eq_vars.append('value')
+        self.value = value
+        self.dict['read'] = PyrePyFunc(self.read)
+        self.dict['write'] = PyrePyFunc(self.write)
+        self.dict['close'] = PyrePyFunc(self.close)
+
+    def read(self, n=-1):
+        return PyreString(self.value.read(n))
+
+    def write(self, bytes):
+        self.value.write(bytes.value)
+        return bytes
+
+    def close(self):
+        self.value.close()
 
 class PyreString(PyreObject):
 
@@ -178,6 +244,18 @@ class PyreNumber(PyreObject):
         self.dict['and'] = PyrePyFunc(self.land)
         self.dict['not'] = PyrePyFunc(self.lnot)
         self.dict['int'] = PyrePyFunc(self.int)
+        self.dict['bxor'] = PyrePyFunc(self.bxor)
+        self.dict['rshift'] = PyrePyFunc(self.rshift)
+        self.dict['lshift'] = PyrePyFunc(self.lshift)
+
+    def rshift(self, other):
+        return PyreNumber(self.value >> other.value)
+
+    def lshift(self, other):
+        return PyreNumber(self.value << other.value)
+
+    def bxor(self, other):
+        return PyreNumber(self.value ^ other.value)
 
     def mod(self, other):
         return PyreNumber(self.value % other.value)

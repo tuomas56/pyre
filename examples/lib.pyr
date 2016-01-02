@@ -8,4 +8,8 @@ do
 
 	let double = def (n)
 		n.mul(2)
+
+	mod do
+		let double = double
+	end
 end

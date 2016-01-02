@@ -29,7 +29,7 @@ token_specs = [
     spec(
         'keyword',
         r'((if)|(do)|(else)|(end)|(while)|(def)|(let)|'
-        r'(try)|(except)|(break)|(return)|(for)|(in))(?=\s)'),
+        r'(try)|(except)|(break)|(return)|(for)|(in)|(mod))(?=\s)'),
     spec(
         'floatn',
         r'-?[0-9]+\.[0-9]+'),
@@ -41,7 +41,7 @@ token_specs = [
         r'[A-Za-z_\$][A-Za-z_0-9\$]*'),
     spec(
         'string',
-        r'"[^"]*?"'),
+        r'"[^"]*?"|\'[^\']*?\''),
     spec(
         'dot',
         r'\.'),
@@ -217,6 +217,15 @@ class ReturnExpr(AstNode):
         return 'return %s' % self.value
 
 
+class ModuleExpr(AstNode):
+
+    def __init__(self, body):
+        self.body = body
+
+    def __str__(self):
+        return 'module %s' % self.body
+
+
 def parse_args(t):
     return [t[0]] + t[1]
 
@@ -287,12 +296,15 @@ tryexpr = skip(keyword('try')) + expr + \
 
 breakexpr = skip(keyword('break')) >> (lambda t: BreakExpr())
 
-returnexpr = skip(keyword('return')) + expr >> (lambda t: ReturnExpr(t))
+returnexpr = skip(keyword('return')) + expr >> ReturnExpr
 
 forexpr = skip(keyword('for')) + ident + skip(keyword('in')) + expr + expr >> (lambda t: ForExpr(*t))
 
+modexpr = skip(keyword('mod')) + expr >> ModuleExpr
+
 expr.define((breakexpr | returnexpr | call | brackets | block |
-             ifexpr | varexpr | whileexpr | defexpr | tryexpr | forexpr))
+             ifexpr | varexpr | whileexpr | defexpr | tryexpr |
+             forexpr | modexpr))
 
 toplevel = expr + skip(eof)
 
