@@ -1,0 +1,36 @@
+mod do
+	let _pyi = loadex("pyre.exts.pyinterop")
+	let _socket = _pyi.pyimport("socket")
+	let _threading = loadex("pyre.exts.threading")
+	let _event = import("event")
+
+	let create_server = def (callback) do
+		let serverobj = _event.event_manager(list('connect', 'disconnect'), list(
+			list('_listening', True),
+			list('listen', def (hostname, port) do
+				serverobj.setattr('socket', _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM))
+				_threading.run(def () do
+					serverobj.socket.bind(list(hostname, port))
+					while serverobj._listening do
+						let client = serverobj.socket.accept!
+						let clientobj = _event.event_manager(list('data'), list(
+							list('write', def (bytes)
+								client.write(bytes))
+						))
+						serverobj.trigger('connect', clientobj)
+						_threading.run(def () do
+							while serverobj._listening do
+								let data = client.recv(4096)
+								clientobj.trigger('data', data)
+							end
+						end, list!)
+					end
+				end, list!)
+			end),
+			list('stop', def () do
+				setattr('_listening', False)
+			end)
+		))
+		serverobj
+	end 
+end

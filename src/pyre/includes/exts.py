@@ -8,7 +8,7 @@ def loadex(state, name):
     pymod = __import__(name)
     for part in name.split(".")[1:]:
         pymod = getattr(pymod, part)
-    names = [name for name in pymod.__all__ if not name.startswith('__')]
+    names = pymod.__all__
     mod = PyreModule()
     for name, value in zip(names, map(partial(getattr, pymod), names)):
         if callable(value):

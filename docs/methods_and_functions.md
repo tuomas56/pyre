@@ -98,6 +98,11 @@ Adds to strings together
 
 Splits the string whenever the seperator appears.
 
+###Module objects
+
+These are simply objects, with no special methods, used to contain
+the variables imported from modules.
+
 ###List objects
 
 ####List#reverse
@@ -181,11 +186,9 @@ Sums an number list.
 ###import(name)
 
 Imports a module, relatively. This replaces dots with slashes,
-appends '.pyr' and then reads the file, evals it. Any variables not in
-the global scope before will be hoisted into a module object as attributes. 
-It behaves almost exactly like Python's import: everything will be evaluated.
-It returns a module object like Node's require.
+appends '.pyr' and then reads the file, evals it. The result is returned
+from the import function.
 
-###object!
+###object(*attrs)
 
-Constructs a blank object.
+Constructs an object from a list of pairs of attribute names and values.

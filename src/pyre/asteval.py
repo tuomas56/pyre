@@ -155,10 +155,7 @@ def pyre_eval(expr, state):
         return PyreString(expr.value)
     elif isinstance(expr, Block):
         newstate = state.scope_down()
-        try:
-            vals = [None] + [pyre_eval(e, newstate) for e in expr.value]
-        except ReturnError as e:
-            return e.value
+        vals = [None] + [pyre_eval(e, newstate) for e in expr.value]
         newstate.locals.parent.update(newstate.locals.items)
         state.locals = newstate.locals.parent
         return vals[-1]
@@ -191,7 +188,10 @@ def pyre_eval(expr, state):
                 raise TypeError('Not enough arguments supplied!')
             dstate = state.scope_down()
             dstate.locals.update(args)
-            return pyre_eval(expr.body, dstate)
+            try:
+                return pyre_eval(expr.body, dstate)
+            except ReturnError as e:
+                return e.value
         return PyrePyFunc(_wrapper)
     elif isinstance(expr, TryExpr):
         try:
@@ -214,7 +214,8 @@ def pyre_eval(expr, state):
         body = pyre_eval(expr.body, newstate)
         mod = PyreModule()
         for name, val in newstate.locals.items.items():
-            mod._setattr(PyreString(name), val)
+            if not name.startswith('_'):
+                mod._setattr(PyreString(name), val)
         return mod
     else:
         raise TypeError("Can't eval object of type '%s'!" %

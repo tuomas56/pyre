@@ -35,7 +35,10 @@ def pyre_hasattr(expr, attr):
 
 def pyre_to_py_val(expr):
     if isinstance(expr, PyreNumber):
-        return expr.value
+        if int(expr.value) == expr.value:
+            return int(expr.value)
+        else:
+            return expr.value
     elif isinstance(expr, PyreString):
         return eval('"%s"' % expr.value)
     elif isinstance(expr, (PyreList)):
@@ -176,7 +179,6 @@ class PyreString(PyreObject):
     def __str__(self):
         return str(self.value)
 
-
 class PyreList(PyreObject):
 
     def __init__(self, values):
@@ -193,6 +195,13 @@ class PyreList(PyreObject):
         self.dict['filter'] = PyrePyFunc(self.filter)
         self.dict['reverse'] = PyrePyFunc(self.reverse)
         self.dict['__iter__'] = PyrePyFunc(lambda: self.values)
+        self.dict['index'] = PyrePyFunc(self.index)
+
+    def index(self, value):
+        for i, val in enumerate(self.values):
+            if pyre_truthy(val.equals(value)):
+               return PyreNumber(i)
+        raise IndexError("'%s' not in list!" % value)
 
     def reverse(self):
         return PyreList(self.values[::-1])

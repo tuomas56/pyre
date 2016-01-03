@@ -1,0 +1,18 @@
+let dict = def () do
+	let dobj = object(list(
+		list('keys', list!),
+		list('values', list!),
+		list('get', def (name)
+		dobj.values.get(dobj.keys.index(name))),
+		list('set', def (name, value)
+			try do
+				dobj.values.set(dobj.keys.index(name), value)
+				value
+			end except do
+				dobj.keys.append(name)
+				dobj.values.append(value)
+				value
+			end)
+	))
+	dobj
+end

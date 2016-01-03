@@ -29,7 +29,7 @@ token_specs = [
     spec(
         'keyword',
         r'((if)|(do)|(else)|(end)|(while)|(def)|(let)|'
-        r'(try)|(except)|(break)|(return)|(for)|(in)|(mod))(?=\s)'),
+        r'(try)|(except)|(break)|(return)|(for)|(in)|(mod))(?=\W)'),
     spec(
         'floatn',
         r'-?[0-9]+\.[0-9]+'),
@@ -258,6 +258,8 @@ def parse_call(t):
 
 def parse_def(t):
     args, body = t
+    if args is None:
+        args = []
 
     return DefExpr(args, body)
 
