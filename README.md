@@ -1,4 +1,4 @@
-#Pyre
+<img src='http://i.imgur.com/B1YaxTm.png' width=250/>
 
 A Pythonic, expression-oriented language implemented in Python.
 
