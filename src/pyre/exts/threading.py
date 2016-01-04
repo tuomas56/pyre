@@ -4,7 +4,6 @@ import threading
 
 def run(func, args):
 	func, args = map(pyre_to_py_val, (func, args))
-	print('thread', func, args)
 	threading.Thread(target=func, args=args).start()
 
 __all__ = ['run']

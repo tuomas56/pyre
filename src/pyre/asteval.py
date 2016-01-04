@@ -43,6 +43,9 @@ class StateDict:
         else:
             return self.parent[name]
 
+    def __contains__(self, name):
+        return name in self.items or name in self.parent
+
     def keys(self):
         return self.parent.keys()
 
@@ -107,9 +110,9 @@ def pyre_to_py_val(expr):
     if isinstance(expr, PyreNumber):
         return expr.value
     elif isinstance(expr, PyreString):
-        return eval('"%s"' % expr.value)
+        return expr.value
     elif isinstance(expr, (PyreList)):
-        return [pyre_to_py_val(x) for x in expr.values]
+        return tuple(pyre_to_py_val(x) for x in expr.values)
     elif isinstance(expr, (PyrePyFunc)):
         return expr.dict['__call__']
     elif isinstance(expr, PyreBuffer):
@@ -134,7 +137,7 @@ class ReturnError(Exception):
 def pyre_eval(expr, state):
     if isinstance(expr, Name):
         try:
-            return state.locals[expr.value]
+            return state.locals[expr.value][1]
         except:
             raise NameError('No such variable "%s"!' % expr.value)
     elif isinstance(expr, Call):
@@ -171,7 +174,7 @@ def pyre_eval(expr, state):
         result = []
         newstate = state.scope_down()
         for x in pyre_call(pyre_getattr(pyre_eval(expr.expr, state), '__iter__'), []):
-            newstate.locals[expr.var.value] = x
+            newstate.locals[expr.var.value] = [False, x]
             try:
                 result.append(pyre_eval(expr.body, newstate))
             except BreakError:
@@ -183,11 +186,12 @@ def pyre_eval(expr, state):
         def _wrapper(*args):
             if len(args) > len(expr.args):
                 raise TypeError('Too many arguments supplied!')
-            args = dict(zip(expr.args, args))
+            args = list(zip(expr.args, args))
             if len(args) < len(expr.args):
                 raise TypeError('Not enough arguments supplied!')
             dstate = state.scope_down()
-            dstate.locals.update(args)
+            for name, arg in args:
+                dstate.locals[name] = [False, arg]
             try:
                 return pyre_eval(expr.body, dstate)
             except ReturnError as e:
@@ -200,22 +204,28 @@ def pyre_eval(expr, state):
             raise
         except BreakError:
             raise
-        except:
+        except BaseException:
             return pyre_eval(expr.exceptbody, state)
     elif isinstance(expr, BreakExpr):
         raise BreakError()
     elif isinstance(expr, ReturnExpr):
         raise ReturnError(pyre_eval(expr.value, state))
     elif isinstance(expr, VarExpr):
-        state.locals[expr.var] = pyre_eval(expr.value, state)
-        return state.locals[expr.var]
+        if expr.var in state.locals:
+            if state.locals[expr.var][0] == True:
+                state.locals[expr.var][1] = pyre_eval(expr.value, state)
+            else:
+                raise NameError("Variable '%s' is immutable!" % expr.var)
+        else:
+            state.locals[expr.var] = [expr.mut, pyre_eval(expr.value, state)]
+        return state.locals[expr.var][1]
     elif isinstance(expr, ModuleExpr):
         newstate = state.scope_down()
         body = pyre_eval(expr.body, newstate)
         mod = PyreModule()
         for name, val in newstate.locals.items.items():
-            if not name.startswith('_'):
-                mod._setattr(PyreString(name), val)
+            if name in expr.args:
+                mod._setattr(PyreString(name), val[1])
         return mod
     else:
         raise TypeError("Can't eval object of type '%s'!" %

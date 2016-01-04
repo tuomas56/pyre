@@ -28,7 +28,7 @@ def builtin_func(state, name, f=None):
     if f is None:
         return partial(builtin_func, state, name)
     else:
-        state.locals[name] = PyrePyFunc(partial(f, state))
+        state.locals[name] = (False, PyrePyFunc(partial(f, state)))
         return state.locals[name]
 
 @builtin_func(global_state, 'eval')
@@ -42,8 +42,8 @@ def _object(state, *args):
         obj._setattr(arg.values[0], arg.values[1])
     return obj
 
-global_state.locals['True'] = Pyre_TRUE
-global_state.locals['False'] = Pyre_FALSE
+global_state.locals['True'] = (False, Pyre_TRUE)
+global_state.locals['False'] = (False, Pyre_FALSE)
 
 def load_stdlib():
     for mod_name in STDLIB_PY_MODULES:

@@ -1,36 +1,63 @@
-mod do
+module (create_server, connect) do
 	let _pyi = loadex("pyre.exts.pyinterop")
 	let _socket = _pyi.pyimport("socket")
 	let _threading = loadex("pyre.exts.threading")
 	let _event = import("event")
 
 	let create_server = def (callback) do
-		let serverobj = _event.event_manager(list('connect', 'disconnect'), list(
+		let serverobj = _event.event_manager(list('connect', 'disconnect'))
+		let props = list(
 			list('_listening', True),
-			list('listen', def (hostname, port) do
-				serverobj.setattr('socket', _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM))
+			list('listen', def (hostname, port)
 				_threading.run(def () do
+					serverobj.setattr('socket', _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM))
+					serverobj.socket.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
 					serverobj.socket.bind(list(hostname, port))
+					serverobj.socket.listen!
 					while serverobj._listening do
-						let client = serverobj.socket.accept!
-						let clientobj = _event.event_manager(list('data'), list(
-							list('write', def (bytes)
-								client.write(bytes))
-						))
+						try
+							let mut ca = serverobj.socket.accept!
+						except
+							break
+						let mut clientobj = _event.event_manager(list('data'))
+						let mut client_read = ca.get(0).makefile("r")
+						let mut client = ca.get(0)
+						clientobj.setattr('address', ca.get(1))
+						clientobj.setattr('write', def (bytes) do
+							client.sendall(bytes.encode!)
+						end)
+						clientobj.setattr('close', def () do
+							client_read.close!
+							client.close!
+						end)
 						serverobj.trigger('connect', clientobj)
 						_threading.run(def () do
 							while serverobj._listening do
-								let data = client.recv(4096)
-								clientobj.trigger('data', data)
+								try
+									let mut data = client_read.readline!
+								except
+									break
+								if data.equals("".encode!)
+									break
+								else
+									clientobj.trigger('data', data)
 							end
+							serverobj.trigger('disconnect', clientobj)
 						end, list!)
 					end
-				end, list!)
-			end),
+				end, list!)),
 			list('stop', def () do
-				setattr('_listening', False)
+				serverobj.setattr('_listening', False)
+				serverobj.socket.close!
 			end)
-		))
+		)
+		for prop in props
+			serverobj.setattr(prop.get(0), prop.get(1))
+		serverobj.on('connect', callback)
 		serverobj
 	end 
+
+	let connect = def (host, port, callback) do
+		
+	end
 end

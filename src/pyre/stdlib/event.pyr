@@ -1,8 +1,6 @@
-mod do 
-	let _threading = loadex("pyre.exts.threading")
-
-	let event_manager = def (events, properties) do
-		let eobj = object(properties)
+module (event_manager) do 
+	let event_manager = def (events) do
+		let eobj = object(list!)
 		let _handlers = dict!
 		for event in events
 			_handlers.set(event, list!)
@@ -12,8 +10,9 @@ mod do
 
 		let trigger = def (name, data) 
 			for handler in eobj._handlers.get(name)
-				_threading.run(handler, data)
+				handler(data)
 
+		eobj.setattr('_handlers', _handlers)
 		eobj.setattr('on', on)
 		eobj.setattr('trigger', trigger)
 		eobj

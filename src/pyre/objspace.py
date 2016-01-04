@@ -40,9 +40,11 @@ def pyre_to_py_val(expr):
         else:
             return expr.value
     elif isinstance(expr, PyreString):
-        return eval('"%s"' % expr.value)
+        return expr.value
+    elif isinstance(expr, PyreBytes):
+        return expr.value
     elif isinstance(expr, (PyreList)):
-        return [pyre_to_py_val(x) for x in expr.values]
+        return tuple(pyre_to_py_val(x) for x in expr.values)
     elif isinstance(expr, (PyrePyFunc)):
         return expr.dict['__call__']
     elif isinstance(expr, PyreBuffer):
@@ -60,6 +62,8 @@ def pyre_to_pyre_val(val):
         return PyrePyFunc(_wrapper)
     elif isinstance(val, str):
         return PyreString(val)
+    elif isinstance(val, bytes):
+        return PyreBytes(val)
     elif isinstance(val, (int, float)):
         return PyreNumber(float(val))
     elif isinstance(val, io.IOBase):
@@ -71,13 +75,58 @@ def pyre_to_pyre_val(val):
         names = [name for name in dir(val) if not name.startswith('__')]
         for name, val in zip(names, map(partial(getattr, val), names)):
             obj._setattr(PyreString(name), pyre_to_pyre_val(val))
+        return obj
 
-
-class PyrePyFunc:
+class PyreEmptyFunc:
 
     def __init__(self, func):
         self.dict = {}
         self.dict['__call__'] = func
+
+class PyrePyFunc:
+
+    def __init__(self, func):
+        self.func = func
+        self.dict = {}
+        self.dict['__call__'] = func
+        self.dict['setattr'] = PyreEmptyFunc(self._setattr)
+        self.dict['getattr'] = PyreEmptyFunc(self._getattr)
+        self.dict['equals'] = PyreEmptyFunc(self.equals)
+        self.dict['apply'] = PyreEmptyFunc(self.apply)
+        self.dict['str'] = PyreEmptyFunc(self.str)
+        self.dict['dir'] = PyreEmptyFunc(self.dir)
+        self.dict['partial'] = PyreEmptyFunc(self.partial)
+        self.eq_vars = ['func']
+
+    def dir(self):
+        return pyre_to_pyre_val(self.dict.keys())
+
+    def str(self):
+        return PyreString(str(self))
+
+    def equals(self, other):
+        for var in self.eq_vars:
+            if not hasattr(
+                other,
+                var) or getattr(
+                self,
+                var) != getattr(
+                other,
+                    var):
+                return Pyre_FALSE
+        if len(self.eq_vars) == 0:
+            if not self.dict == other.dict:
+                return Pyre_FALSE
+        return Pyre_TRUE
+
+    def apply(self, func):
+        return pyre_call(func, [self])
+
+    def _setattr(self, name, value):
+        self.dict[name.value] = value
+
+    def _getattr(self, name):
+        return self.dict[name.value]
 
 class PyreObject:
 
@@ -121,7 +170,6 @@ class PyreObject:
     def _getattr(self, name):
         return self.dict[name.value]
 
-
 class PyreModule(PyreObject):
     pass
 
@@ -132,11 +180,15 @@ class PyreBuffer(PyreObject):
         self.eq_vars.append('value')
         self.value = value
         self.dict['read'] = PyrePyFunc(self.read)
+        self.dict['readline'] = PyrePyFunc(self.readline)
         self.dict['write'] = PyrePyFunc(self.write)
         self.dict['close'] = PyrePyFunc(self.close)
 
-    def read(self, n=-1):
-        return PyreString(self.value.read(n))
+    def read(self, n):
+        return PyreString(self.value.read(int(n.value)))
+
+    def readline(self):
+        return PyreString(self.value.readline())
 
     def write(self, bytes):
         self.value.write(bytes.value)
@@ -144,6 +196,36 @@ class PyreBuffer(PyreObject):
 
     def close(self):
         self.value.close()
+
+class PyreBytes(PyreObject):
+
+    def __init__(self, value):
+        super().__init__()
+        self.value = value
+        self.eq_vars.append('value')
+        self.dict['len'] = PyrePyFunc(self.len)
+        self.dict['concat'] = PyrePyFunc(self.concat)
+        self.dict['rep'] = PyrePyFunc(self.rep)
+        self.dict['list'] = PyrePyFunc(self.list)
+        self.dict['decode'] = PyrePyFunc(self.decode)
+
+    def list(self):
+        return PyreList([PyreBytes(x) for x in self.value])
+
+    def concat(self, other):
+        return PyreBytes(self.value + other.value)
+
+    def rep(self, times):
+        return PyreBytes(self.value * int(times.value))
+
+    def len(self):
+        return PyreNumber(len(self.value))
+
+    def decode(self):
+        return PyreString(self.value.decode())
+
+    def __str__(self):
+        return str(self.value)
 
 class PyreString(PyreObject):
 
@@ -157,6 +239,7 @@ class PyreString(PyreObject):
         self.dict['concat'] = PyrePyFunc(self.concat)
         self.dict['rep'] = PyrePyFunc(self.rep)
         self.dict['list'] = PyrePyFunc(self.list)
+        self.dict['encode'] = PyrePyFunc(self.encode)
 
     def list(self):
         return PyreList([PyreString(x) for x in self.value])
@@ -178,6 +261,9 @@ class PyreString(PyreObject):
 
     def __str__(self):
         return str(self.value)
+
+    def encode(self):
+        return PyreBytes(self.value.encode())
 
 class PyreList(PyreObject):
 

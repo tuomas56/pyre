@@ -13,6 +13,7 @@ from pyre.runtime import global_state, load_stdlib
 from pyre.asteval import pyre_eval
 from pyre.parser import parse
 import platform
+import traceback
 
 def pyre_exec_string(string):
     load_stdlib()
@@ -31,10 +32,15 @@ def repl():
         line = [input(">>> ")]
         while line[-1] != "":
             line.append(input("... "))
+        if line == [""]:
+            continue
         try:
-            print(pyre_eval(parse('\n'.join(line)), state))
+            val = pyre_eval(parse('\n'.join(line)), state)
+            print(val)
+            state.locals['_'] = (False, val)
         except Exception as e:
-            raise
+            traceback.print_exc()
+
 
 
 def main(argv):

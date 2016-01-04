@@ -29,7 +29,7 @@ token_specs = [
     spec(
         'keyword',
         r'((if)|(do)|(else)|(end)|(while)|(def)|(let)|'
-        r'(try)|(except)|(break)|(return)|(for)|(in)|(mod))(?=\W)'),
+        r'(try)|(except)|(break)|(return)|(for)|(in)|(module)|(mut))(?=\W)'),
     spec(
         'floatn',
         r'-?[0-9]+\.[0-9]+'),
@@ -162,8 +162,8 @@ class IfExpr(AstNode):
 
 class VarExpr(AstNode):
 
-    def __init__(self, var, value):
-        self.var, self.value = var.value, value
+    def __init__(self, mut, var, value):
+        self.mut, self.var, self.value = bool(mut), var.value, value
 
     def __str__(self):
         return 'var %s = %s' % (self.var, self.value)
@@ -219,7 +219,8 @@ class ReturnExpr(AstNode):
 
 class ModuleExpr(AstNode):
 
-    def __init__(self, body):
+    def __init__(self, args, body):
+        self.args = args if args is not None else []
         self.body = body
 
     def __str__(self):
@@ -284,7 +285,7 @@ block = skip(keyword('do')) + many(expr) + skip(keyword('end')) >> Block
 ifexpr = skip(keyword('if')) + expr + expr + \
     maybe(skip(keyword('else')) + expr) >> (lambda t: IfExpr(*t))
 
-varexpr = skip(keyword('let')) + ident + skip(eq) + \
+varexpr = skip(keyword('let')) + maybe(keyword('mut')) + ident + skip(eq) + \
     expr >> (lambda t: VarExpr(*t))
 
 whileexpr = skip(keyword('while')) + expr + expr >> (lambda t: WhileExpr(*t))
@@ -302,7 +303,8 @@ returnexpr = skip(keyword('return')) + expr >> ReturnExpr
 
 forexpr = skip(keyword('for')) + ident + skip(keyword('in')) + expr + expr >> (lambda t: ForExpr(*t))
 
-modexpr = skip(keyword('mod')) + expr >> ModuleExpr
+modexpr = skip(keyword('module')) + skip(lrb) + \
+         maybe(defargs) + skip(rrb) + expr >> (lambda t: ModuleExpr(*t))
 
 expr.define((breakexpr | returnexpr | call | brackets | block |
              ifexpr | varexpr | whileexpr | defexpr | tryexpr |

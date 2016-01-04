@@ -1,0 +1,13 @@
+do
+	let net = import("net")
+	let server = net.create_server(def (client) do
+		print("=>", client.address.get(0), "connected")
+		client.on('data', def (data) do
+			print("=>", client.address.get(0), data)
+			client.write(data)
+		end)
+	end)
+	
+	server.listen('', 8000)
+	print("=> listening on 0.0.0.0:8000")
+end
