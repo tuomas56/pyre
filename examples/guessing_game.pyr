@@ -1,0 +1,54 @@
+do
+	let pyi = import("pyre.exts.pyinterop")
+	let random = pyi.pyimport("random")
+
+	let get = def (prompt, validate)
+		while True
+			try
+				return validate(input(prompt))
+			except
+				print("Invalid input!")
+
+	let guess_number = def (question, correct, guesses) do
+		let validate = def (s) do
+			let n = s.num!
+			if n.gt(100).or(n.lt(0))
+				error("Out of range!")
+			n
+		end
+		for guess in range(guesses, 0, -1)
+			let mut prompt = "You have ".concat(guess.str!)
+				.concat(" guesses. ").concat(question)
+			let mut n = get(prompt, validate)
+			if n.equals(correct)
+				return True
+			else if n.gt(correct)
+				print("Too low.")
+			else if n.lt(correct)
+				print("Too high.")
+		False
+	end
+
+	let main = def () do
+		let number = random.randrange(100)
+		let success = guess_number("Guess the number: ", number, 10)
+
+		if success
+			print("Well done!")
+		else
+			print("You didn't guess correctly. The answer was ".concat(number.str!))
+
+		let validate = def (s)
+			if s.equals("y").or(s.equals("yes"))
+				True
+			else if s.equals("n").or(s.equals("no"))
+				False
+			else
+				error("Not valid.")
+
+		if get("Do you want to play again? ", validate)
+			main!
+	end
+
+	main!
+end

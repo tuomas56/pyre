@@ -1,3 +1,6 @@
+#(c) Tuomas Laakkonen 2015, under the MIT license
+#net module, implements basic networking.
+
 module (create_server, connect) do
 	let _pyi = loadex("pyre.exts.pyinterop")
 	let _socket = _pyi.pyimport("socket")
@@ -37,7 +40,7 @@ module (create_server, connect) do
 									let mut data = client_read.readline!
 								except
 									break
-								if data.equals("".encode!)
+								if data.equals("")
 									break
 								else
 									clientobj.trigger('data', data)
@@ -58,6 +61,36 @@ module (create_server, connect) do
 	end 
 
 	let connect = def (host, port, callback) do
-		
+		let clientobj = _event.event_manager(list('connect', 'disconnect', 'data'))
+		let socket = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+		socket.setsockopt(_socket.SOL_SOCKET, _socket.SO_REUSEADDR, 1)
+		let sockfile = socket.makefile!
+		let props = list(
+			list('_listening', True),
+			list('close', def () do
+				clientobj.setattr('_listening', False)
+				socket.close!
+				clientobj.trigger('disconnect', clientobj)
+			end),
+			list('write', def (bytes)
+				socket.sendall(bytes.encode!))
+		)
+		for prop in props
+			clientobj.setattr(prop.get(0), prop.get(1))
+		clientobj.trigger('connect', socket.connect(list(host, port)))
+		callback(clientobj)
+		_threading.run(def () do
+			while clientobj._listening do
+				try
+					let mut data = sockfile.readline!
+				except
+					break
+				if data.equals("".encode!)
+					break
+				else
+					clientobj.trigger('data', data)
+			end
+		end, list!)
+		clientobj
 	end
 end

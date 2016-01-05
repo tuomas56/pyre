@@ -2,6 +2,7 @@ from pyre.runtime import global_state, builtin_func
 from pyre.objspace import PyreString, PyreObject, PyrePyFunc, PyreBuffer
 from pyre.asteval import pyre_to_py_val
 import sys
+import os
 
 @builtin_func(global_state, 'print')
 def _print(state, *args):

@@ -1,0 +1,70 @@
+#(c) Tuomas Laakkonen 2015, under the MIT license
+#parsec module, an implementation of basic parser combinators.
+
+module (some, a, pure, all) do
+	let parser = def (parse) do
+		let self = object(list(
+			list('then', def (other)
+				parser(def (stream) do
+					let vs1 = self.parse(stream)
+					let stream2 = vs1.get(1)
+					let vs2 = other.parse(stream2)
+					list(list(vs1.get(0), vs2.get(0)), vs2.get(1))
+				end)),
+			list('or', def (other)
+				parser(def (stream) do
+					try
+						let vs = self.parse(stream)
+					except
+						let vs = other.parse(stream)
+					return vs
+				end)),
+			list('parse', parse),
+			list('maybe', def ()
+				self.or(pure(None))),
+			list('many', def ()
+				parser(def (stream) do
+					let mut s = stream
+					let vals = list!
+					while True
+						try do
+							let mut vs = self.parse(s)
+							vals.append(vs.get(0))
+							let s = vs.get(1)
+						end except break
+					list(vals, s)
+				end)),
+			list('oneplus', def ()
+				self.then(self.many!),
+			list('apply', def (func)
+				def (stream) do
+					let vs = self.parse(stream)
+					list(func(vs.get(0)), vs.get(1))
+				end)
+		)))
+		self
+	end
+
+	let some = def (pred)
+		parser(def (s) do
+			let char = s.get(-1)
+			if pred(char) do
+				s.pop!
+				list(char, s)
+			end else
+				error("Cannot Parse!")
+		end)
+
+	let a = def (char)
+		some(def (c) c.equals(char))
+
+	let pure = def (val)
+		parser(list.partial(val))
+
+	let all = def (ls) do
+		let mut par = ls.get(0)
+		for p in ls.drop(1)
+			let par = par.then(p)
+		par
+	end
+end

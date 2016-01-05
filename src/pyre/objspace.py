@@ -40,9 +40,9 @@ def pyre_to_py_val(expr):
         else:
             return expr.value
     elif isinstance(expr, PyreString):
-        return expr.value
+        return expr.value.encode().decode("unicode_escape")
     elif isinstance(expr, PyreBytes):
-        return expr.value
+        return expr.value.decode("unicode_escape").encode()
     elif isinstance(expr, (PyreList)):
         return tuple(pyre_to_py_val(x) for x in expr.values)
     elif isinstance(expr, (PyrePyFunc)):
@@ -58,7 +58,7 @@ def pyre_to_py_val(expr):
 def pyre_to_pyre_val(val):
     if callable(val):
         def _wrapper(*args):
-            return pyre_to_pyre_val(val(*map(pyre_to_py_val, args)))
+            return pyre_to_pyre_val(val(*list(map(pyre_to_py_val, args))))
         return PyrePyFunc(_wrapper)
     elif isinstance(val, str):
         return PyreString(val)
@@ -97,6 +97,9 @@ class PyrePyFunc:
         self.dict['dir'] = PyreEmptyFunc(self.dir)
         self.dict['partial'] = PyreEmptyFunc(self.partial)
         self.eq_vars = ['func']
+
+    def partial(self, *args):
+        return PyrePyFunc(partial(self.func, *args))
 
     def dir(self):
         return pyre_to_pyre_val(self.dict.keys())
@@ -282,6 +285,14 @@ class PyreList(PyreObject):
         self.dict['reverse'] = PyrePyFunc(self.reverse)
         self.dict['__iter__'] = PyrePyFunc(lambda: self.values)
         self.dict['index'] = PyrePyFunc(self.index)
+        self.dict['take'] = PyrePyFunc(self.take)
+        self.dict['drop'] = PyrePyFunc(self.drop)
+
+    def take(self, num):
+        return PyreList(self.values[:int(num.value)])
+
+    def drop(self, num):
+        return PyreList(self.values[int(num.value):])
 
     def index(self, value):
         for i, val in enumerate(self.values):

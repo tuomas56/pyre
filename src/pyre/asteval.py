@@ -110,7 +110,9 @@ def pyre_to_py_val(expr):
     if isinstance(expr, PyreNumber):
         return expr.value
     elif isinstance(expr, PyreString):
-        return expr.value
+        return expr.value.encode().decode("unicode_escape")
+    elif isinstance(expr, PyreBytes):
+        return expr.value.encode().decode("unicode_escape")
     elif isinstance(expr, (PyreList)):
         return tuple(pyre_to_py_val(x) for x in expr.values)
     elif isinstance(expr, (PyrePyFunc)):

@@ -1,0 +1,21 @@
+#!/usr/bin/env ipyre -a load -f
+
+#(c) Tuomas Laakkonen 2015, under the MIT license.
+do
+	let pyi = loadex("pyre.exts.pyinterop")
+	let time = pyi.pyimport("time")
+	let net = import("net")
+
+	let c = net.connect("127.0.0.1", 8000, def (c) do
+		print("=> connected")
+		c.on("data", print.partial("=>"))
+	end)
+	while True do
+		let mut data = input("=< ")
+		if data.equals("")
+			quit!
+		else
+			c.write(data.concat('\n'))
+		time.sleep(0.01)
+	end
+end

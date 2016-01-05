@@ -42,8 +42,17 @@ def _object(state, *args):
         obj._setattr(arg.values[0], arg.values[1])
     return obj
 
+@builtin_func(global_state, 'error')
+def _error(state, message):
+    raise Exception(message)
+
+@builtin_func(global_state, 'id')
+def _id(state, *args):
+    return args[0] if len(args) == 1 else args
+
 global_state.locals['True'] = (False, Pyre_TRUE)
 global_state.locals['False'] = (False, Pyre_FALSE)
+global_state.locals['None'] = (None, None)
 
 def load_stdlib():
     for mod_name in STDLIB_PY_MODULES:
