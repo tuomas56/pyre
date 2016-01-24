@@ -1,5 +1,5 @@
 do
-	let pyi = import("pyre.exts.pyinterop")
+	let pyi = loadex("pyre.exts.pyinterop")
 	let random = pyi.pyimport("random")
 
 	let get = def (prompt, validate)
@@ -16,20 +16,24 @@ do
 				error("Out of range!")
 			n
 		end
-		for guess in range(guesses, 0, -1)
+		for guess in range(guesses, 0, -1) do
 			let mut prompt = "You have ".concat(guess.str!)
 				.concat(" guesses. ").concat(question)
 			let mut n = get(prompt, validate)
 			if n.equals(correct)
 				return True
 			else if n.gt(correct)
-				print("Too low.")
-			else if n.lt(correct)
 				print("Too high.")
+			else if n.lt(correct)
+				print("Too low.")
+		end
 		False
 	end
 
 	let main = def () do
+		print("Welcome to the guessing game!")
+		input
+
 		let number = random.randrange(100)
 		let success = guess_number("Guess the number: ", number, 10)
 

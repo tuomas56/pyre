@@ -33,8 +33,16 @@ def pyre_getattr(expr, attr):
 def pyre_hasattr(expr, attr):
     return attr in expr.dict
 
+class _empty: pass
+
 def pyre_to_py_val(expr):
-    if isinstance(expr, PyreNumber):
+    if expr is Pyre_TRUE:
+        return True
+    elif expr is Pyre_FALSE:
+        return False
+    elif expr if Pyre_NONE:
+        return None
+    elif isinstance(expr, PyreNumber):
         if int(expr.value) == expr.value:
             return int(expr.value)
         else:
@@ -50,7 +58,7 @@ def pyre_to_py_val(expr):
     elif isinstance(expr, PyreBuffer):
         return expr.value
     elif isinstance(expr, PyreObject):
-        obj = object()
+        obj = _empty()
         for name, val in expr.dict.items():
             setattr(obj, name, pyre_to_py_val(val))
         return obj
@@ -60,6 +68,12 @@ def pyre_to_pyre_val(val):
         def _wrapper(*args):
             return pyre_to_pyre_val(val(*list(map(pyre_to_py_val, args))))
         return PyrePyFunc(_wrapper)
+    elif val is True:
+        return Pyre_TRUE
+    elif val is False:
+        return Pyre_FALSE
+    elif val is None:
+        return Pyre_NONE
     elif isinstance(val, str):
         return PyreString(val)
     elif isinstance(val, bytes):
@@ -419,3 +433,4 @@ class PyreNumber(PyreObject):
 
 Pyre_TRUE = PyreNumber(1)
 Pyre_FALSE = PyreNumber(0)
+Pyre_NONE = PyreObject()

@@ -13,6 +13,7 @@ from pyre.objspace import (
     PyreObject,
     Pyre_TRUE,
     Pyre_FALSE,
+    Pyre_NONE,
     PyrePyFunc,
     PyreList)
 from pyre.parser import parse
@@ -52,7 +53,7 @@ def _id(state, *args):
 
 global_state.locals['True'] = (False, Pyre_TRUE)
 global_state.locals['False'] = (False, Pyre_FALSE)
-global_state.locals['None'] = (None, None)
+global_state.locals['None'] = (None, Pyre_NONE)
 
 def load_stdlib():
     for mod_name in STDLIB_PY_MODULES:

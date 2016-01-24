@@ -9,22 +9,22 @@ of a module expression, with the body being a block.
 A module expression looks like this:
 
 ```ruby
-mod body
+module (names) body
 ```
 
-Where *body* is an expression that is executed when the module is `eval`ed.
+Where *body* is an expression that is executed when the module is `eval`ed. And *names* is a comma seperated list of identifiers.
 Typically this is a block. When a module is loaded, body is executed and then
-a module object is created. All the variables local to body are then set
+a module object is created. All the variables in *names* are then set
 as attributes of the module object. This allows module to work like this:
 
 *lib.pyr*
 ```ruby
-mod do
-	let double = def (n)
-		n.mul(2)
+module (double, triple) do
+	let double = def n
+		n.mul 2
 
-	let triple = def (n)
-		n.mul(3)
+	let triple = def n
+		n.mul 3
 end
 ```
 
@@ -32,10 +32,10 @@ end
 ```ruby
 >>> let lib = import("lib")
 ...
->>> lib.double(2)
+>>> lib.double 2
 ...
 4.0
->>> lib.triple(6)
+>>> lib.triple 6
 ...
 18.0
 ```

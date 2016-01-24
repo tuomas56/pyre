@@ -1,0 +1,7 @@
+module (lowercase, uppercase, letters, numbers, alphanumeric) do
+	let lowercase = 'abcdefghijklmnopqrstuvwxyz'
+	let uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	let letters = lowercase.concat(uppercase)
+	let numbers = '0123456789'
+	let alphanumeric = letters.concat(numbers)
+end

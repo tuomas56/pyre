@@ -1,7 +1,7 @@
 #(c) Tuomas Laakkonen 2015, under the MIT license
 #parsec module, an implementation of basic parser combinators.
 
-module (some, a, pure, all) do
+module (some, a, pure, all, any, finished) do
 	let parser = def (parse) do
 		let self = object(list(
 			list('then', def (other)
@@ -67,4 +67,17 @@ module (some, a, pure, all) do
 			let par = par.then(p)
 		par
 	end
+
+	let any = def (ls) do
+		let mut par = ls.get(0)
+		for p in ls.drop(1)
+			let par = par.or(p)
+		par
+	end
+
+	let finished = parser(def (stream) do
+		if stream.len!.equals(0).not!
+			error("Can't parse!")
+		list(None, stream)
+	end)
 end

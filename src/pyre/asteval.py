@@ -105,6 +105,7 @@ def pyre_getattr(expr, attr):
         raise AttributeError(
             'object "%s" has no attribute "%s"!' % (expr, attr))
 
+class _empty: pass
 
 def pyre_to_py_val(expr):
     if isinstance(expr, PyreNumber):
@@ -120,7 +121,7 @@ def pyre_to_py_val(expr):
     elif isinstance(expr, PyreBuffer):
         return expr.value
     elif isinstance(expr, PyreObject):
-        obj = object()
+        obj = _empty()
         for name, val in expr.dict.items():
             setattr(obj, name, pyre_to_py_val(val))
         return obj

@@ -38,7 +38,7 @@ token_specs = [
         r'-?[0-9]+'),
     spec(
         'ident',
-        r'[A-Za-z_\$][A-Za-z_0-9\$]*'),
+        r'[A-Za-z_\$\+\-\*\/][A-Za-z_0-9\$\+\-\*\/]*'),
     spec(
         'string',
         r'"[^"]*?"|\'[^\']*?\''),
@@ -97,7 +97,6 @@ for type in token_types:
 def keyword(t):
     return tok('keyword', t)
 
-
 class AstNode:
 
     def __init__(self, value):
@@ -113,21 +112,23 @@ class AstNode:
 
 
 class Number(AstNode):
+    type = "Number"
     pass
 
 
 class String(AstNode):
-
+    type = "String"
     def __str__(self):
         return '"%s"' % self.value
 
 
 class Name(AstNode):
+    type = "Name"
     pass
 
 
 class Call(AstNode):
-
+    type = "Call"
     def __init__(self, value, args):
         self.value = value
         self.args = args
@@ -137,7 +138,7 @@ class Call(AstNode):
 
 
 class Attr(AstNode):
-
+    type = "Attr"
     def __init__(self, value, name):
         self.value, self.name = value, name
 
@@ -146,13 +147,13 @@ class Attr(AstNode):
 
 
 class Block(AstNode):
-
+    type = "Block"
     def __str__(self):
         return 'do\n %s\nend' % ('\n '.join(map(str, self.value)))
 
 
 class IfExpr(AstNode):
-
+    type = "If"
     def __init__(self, cond, body, elsebody):
         self.cond, self.body, self.elsebody = cond, body, elsebody
 
@@ -161,7 +162,7 @@ class IfExpr(AstNode):
 
 
 class VarExpr(AstNode):
-
+    type = "Var"
     def __init__(self, mut, var, value):
         self.mut, self.var, self.value = bool(mut), var.value, value
 
@@ -170,7 +171,7 @@ class VarExpr(AstNode):
 
 
 class WhileExpr(AstNode):
-
+    type = "While"
     def __init__(self, cond, body):
         self.cond, self.body = cond, body
 
@@ -178,11 +179,12 @@ class WhileExpr(AstNode):
         return 'while %s %s' % (self.cond, self.body)
 
 class ForExpr(AstNode):
+    type = "For"
     def __init__(self, var, expr, body):
         self.var, self.expr, self.body = var, expr, body
 
 class DefExpr(AstNode):
-
+    type = "Def"
     def __init__(self, args, body):
         self.args, self.body = args, body
 
@@ -191,7 +193,7 @@ class DefExpr(AstNode):
 
 
 class TryExpr(AstNode):
-
+    type = "Try"
     def __init__(self, body, exceptbody):
         self.body, self.exceptbody = body, exceptbody
 
@@ -200,7 +202,7 @@ class TryExpr(AstNode):
 
 
 class BreakExpr(AstNode):
-
+    type = "Break"
     def __init__(self):
         pass
 
@@ -209,7 +211,7 @@ class BreakExpr(AstNode):
 
 
 class ReturnExpr(AstNode):
-
+    type = "Return"
     def __init__(self, value):
         self.value = value
 
@@ -218,7 +220,7 @@ class ReturnExpr(AstNode):
 
 
 class ModuleExpr(AstNode):
-
+    type = "Module"
     def __init__(self, args, body):
         self.args = args if args is not None else []
         self.body = body

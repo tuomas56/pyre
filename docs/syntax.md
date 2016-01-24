@@ -125,3 +125,15 @@ Where `args` is a comma-seperated list of argument names and `body` is the expre
 to execute when the function is called, in terms of `args` and any variables up-scope.
 
 It returns a function object, a first-class value.
+
+###Module definition
+
+This uses the syntax:
+
+```ruby
+module (names) body
+```
+
+Where `names` is a comma-seperated list of arguments names and `body` is the expression
+to evaluate. The variables specified in `names` will be hoisted out of the local scope 
+as attributes of the resulting module objects.

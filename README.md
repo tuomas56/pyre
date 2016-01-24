@@ -41,13 +41,12 @@ Done:
 * Variable assignment and scoping
 * Blocks, return and break
 * For loops
+* Python interop
+* Variable mutability modifiers
 
 Todo:
 
 * Generators
 * Error handling (specific errors)
-* Immutable and mutable variable modifiers
 * Most of the Pyre object space
 * Most of the Pyre standard library
-* Making fundamental types available in Pyre
-* Python interop

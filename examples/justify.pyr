@@ -6,13 +6,13 @@
 do
 	let justify = def (text, n) do
 		let words = text.split(" ").reverse!
-		let lines = list!
+		let mut lines = list!
 
 		#first pass, add words to lines, ensuring they
 		#don't pass the line limit and they have at least one space between them
 		while words.len!.gt(0) do
-			let remaining = n
-			let line = list!
+			let mut remaining = n
+			let mut line = list!
 
 			while remaining.gt(0).and(words.len!.gt(0)) do
 				if words.get(-1).len!.add(1).gt(remaining)
@@ -27,16 +27,14 @@ do
 
 		#second pass, add spaces to make the line lengths match up
 		let lines = for line in lines do
-			let remaining = n.sub(line.map(def (x) x.len!).apply(sum))
-			let avg_spacing = remaining.div(line.len!).int!
-			let j = 0
-
-			while j.lt(line.len!.sub(1)) do
+			let mut remaining = n.sub(line.map(def (x) x.len!).apply(sum))
+			let mut avg_spacing = remaining.div(line.len!).int!
+			
+			for j in range(line.len!.sub(1)) do
 				line.set(j, line.get(j).concat(" ".rep(avg_spacing)))
-				let j = j.add(1)
 			end
 
-			let remainder = remaining.sub(avg_spacing.mul(line.len!.sub(1)))
+			let mut remainder = remaining.sub(avg_spacing.mul(line.len!.sub(1)))
 			line.set(-1, " ".rep(remainder).concat(line.get(-1)))
 
 			line.join("")
