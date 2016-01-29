@@ -6,7 +6,7 @@ import os
 
 @builtin_func(global_state, 'print')
 def _print(state, *args):
-    print(*map(pyre_to_py_val, args))
+    print(*map(pyre_to_py_val, args), flush=True)
 
 
 @builtin_func(global_state, 'input')

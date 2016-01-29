@@ -28,8 +28,113 @@ from pyre.parser import (
     ForExpr,
     ModuleExpr)
 from pyre.objspace import *
+from pyre.util import *
 from functools import partial
 import inspect
+
+from pyre.objspace import *
+from pyre.asteval import *
+
+def pyre_truthy(expr):
+    """Evaluate the truthiness of a value. Everything except 0 (and thus False) is True."""
+    if isinstance(expr, PyreNumber) and expr.value == 0:
+        return False
+    return True
+
+def pyre_call(expr, args):
+    """Implements the call operator via the __call__ special method.
+       This is expected to return a *Python* callable."""
+    return pyre_getattr(expr, '__call__')(*args)
+
+def pyre_getattr(expr, attr):
+    """Implements the dot operator. It first attempts to find the __getallattr__ method,
+       Which is called to find any attribute. Then, it checks the object's dictionary
+       and then if the attribute is not found their, it calls the __getattr__ method."""
+    if pyre_hasattr(expr, '__getallattr__'):
+        return pyre_call(expr.dict['__getallattr__'], attr)
+    elif pyre_hasattr(expr, attr):
+        return expr.dict[attr]
+    elif pyre_hasattr(expr, '__getattr__'):
+        return pyre_call(expr.dict['__getattr__'], attr)
+    else:
+        raise AttributeError(
+            'object "%s" has no attribute "%s"!' % (expr, attr))
+
+def pyre_hasattr(expr, attr):
+    """Checks if an attribute exists in an objects dictionary."""
+    return attr in expr.dict
+
+class _empty: pass
+
+def pyre_to_py_val(expr):
+    """Convert a Pyre value to a Python one. Has direct conversion for some types
+       It then falls back to constructing a object."""
+    if expr == PyreNumber(1):
+        return True
+    elif expr == PyreNumber(0):
+        return False
+    elif expr is Pyre_NONE:
+        return None
+    elif isinstance(expr, PyreNumber):
+        if int(expr.value) == expr.value:
+            return int(expr.value)
+        else:
+            return expr.value
+    elif isinstance(expr, PyreString):
+        return expr.value.encode().decode("unicode_escape")
+    elif isinstance(expr, PyreBytes):
+        return expr.value.decode("unicode_escape").encode()
+    elif isinstance(expr, (PyreList)):
+        return tuple(pyre_to_py_val(x) for x in expr.values)
+    elif isinstance(expr, (PyrePyFunc)):
+        return expr.dict['__call__']
+    elif isinstance(expr, PyreBuffer):
+        return expr.value
+    elif isinstance(expr, PyreObject):
+        obj = _empty()
+        for name, val in expr.dict.items():
+            setattr(obj, name, pyre_to_py_val(val))
+        return obj
+
+def pyre_to_pyre_val(val):
+    """Convert a Python value to a Python one. Has direct conversion for some types
+       It then falls back to constructing a PyreObject."""
+    if callable(val):
+        def _wrapper(*args, **kwargs):
+            return pyre_to_pyre_val(val(*list(map(pyre_to_py_val, args), **kwargs)))
+        return PyrePyFunc(_wrapper)
+    elif val is True:
+        return Pyre_TRUE
+    elif val is False:
+        return Pyre_FALSE
+    elif val is None:
+        return Pyre_NONE
+    elif isinstance(val, str):
+        return PyreString(val)
+    elif isinstance(val, bytes):
+        return PyreBytes(val)
+    elif isinstance(val, (int, float)):
+        return PyreNumber(float(val))
+    elif isinstance(val, io.IOBase):
+        return PyreBuffer(val)
+    elif isinstance(val, collections.Iterable):
+        return PyreList([pyre_to_pyre_val(v) for v in val])
+    else:
+        obj = PyreObject()
+        names = [name for name in dir(val) if not name.startswith('__')]
+        for name, val in zip(names, map(partial(getattr, val), names)):
+            obj._setattr(PyreString(name), pyre_to_pyre_val(val))
+        return obj
+
+def pyre_iter(obj):
+    _next = pyre_call(pyre_getattr(obj, "__iter__"), [])
+    while True:
+        try:
+            yield pyre_call(_next, [])
+        except Exception as e:
+            if str(e) != "stopiter":
+                raise
+            break
 
 class StateDict:
 
@@ -78,53 +183,6 @@ class State:
 
     def copy(self):
         return State(self, self.locals.copy())
-
-
-def pyre_call(expr, args):
-    return pyre_getattr(expr, '__call__')(*args)
-
-
-def pyre_hasattr(expr, attr):
-    return attr in expr.dict
-
-
-def pyre_truthy(expr):
-    if isinstance(expr, PyreNumber) and expr.value == 0:
-        return False
-    return True
-
-
-def pyre_getattr(expr, attr):
-    if pyre_hasattr(expr, '__getallattr__'):
-        return pyre_call(expr.dict['__getallattr__'], attr)
-    elif pyre_hasattr(expr, attr):
-        return expr.dict[attr]
-    elif pyre_hasattr(expr, '__getattr__'):
-        return pyre_call(expr.dict['__getattr__'], attr)
-    else:
-        raise AttributeError(
-            'object "%s" has no attribute "%s"!' % (expr, attr))
-
-class _empty: pass
-
-def pyre_to_py_val(expr):
-    if isinstance(expr, PyreNumber):
-        return expr.value
-    elif isinstance(expr, PyreString):
-        return expr.value.encode().decode("unicode_escape")
-    elif isinstance(expr, PyreBytes):
-        return expr.value.encode().decode("unicode_escape")
-    elif isinstance(expr, (PyreList)):
-        return tuple(pyre_to_py_val(x) for x in expr.values)
-    elif isinstance(expr, (PyrePyFunc)):
-        return expr.dict['__call__']
-    elif isinstance(expr, PyreBuffer):
-        return expr.value
-    elif isinstance(expr, PyreObject):
-        obj = _empty()
-        for name, val in expr.dict.items():
-            setattr(obj, name, pyre_to_py_val(val))
-        return obj
 
 
 class BreakError(Exception):
@@ -176,7 +234,7 @@ def pyre_eval(expr, state):
     elif isinstance(expr, ForExpr):
         result = []
         newstate = state.scope_down()
-        for x in pyre_call(pyre_getattr(pyre_eval(expr.expr, state), '__iter__'), []):
+        for x in pyre_iter(pyre_eval(expr.expr, state)):
             newstate.locals[expr.var.value] = [False, x]
             try:
                 result.append(pyre_eval(expr.body, newstate))
@@ -188,7 +246,7 @@ def pyre_eval(expr, state):
     elif isinstance(expr, DefExpr):
         def _wrapper(*args):
             if len(args) > len(expr.args):
-                raise TypeError('Too many arguments supplied!')
+                raise TypeError('Too many arguments supplied! Should be %s.' % len(args))
             args = list(zip(expr.args, args))
             if len(args) < len(expr.args):
                 raise TypeError('Not enough arguments supplied!')

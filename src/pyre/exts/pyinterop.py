@@ -19,5 +19,11 @@ def pyeval(string):
 def pyexec(string):
     string = pyre_to_py_val(string)
     exec(string)
+    
+    
+def apply_kw(func, ad):
+    func, adict = pyre_to_py_val(func), {pyre_to_py_val(name): pyre_to_py_val(value) 
+                for name, value in zip(ad.dict['keys'].values, ad.dict['values'].values)}
+    return pyre_to_pyre_val(func(**adict))
 
-__all__ = ['pyimport', 'pyexec', 'pyeval']
+__all__ = ['pyimport', 'pyexec', 'pyeval', 'apply_kw']

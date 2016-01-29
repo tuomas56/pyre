@@ -1,0 +1,3 @@
+module (iter) do
+    let iter = def (func) object(list(list('__iter__', func)))
+end

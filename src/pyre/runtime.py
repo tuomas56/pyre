@@ -30,7 +30,7 @@ def builtin_func(state, name, f=None):
         return partial(builtin_func, state, name)
     else:
         state.locals[name] = (False, PyrePyFunc(partial(f, state)))
-        return state.locals[name]
+        return state.locals[name][1]
 
 @builtin_func(global_state, 'eval')
 def _eval(state, str):

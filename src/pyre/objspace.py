@@ -7,19 +7,29 @@ An implementation of the basic object-space and native Pyre types.
 """
 
 from pyre.asteval import *
+from pyre.util import *
 import collections
 import io
 from functools import partial
 
+from pyre.objspace import *
+from pyre.asteval import *
+
 def pyre_truthy(expr):
+    """Evaluate the truthiness of a value. Everything except 0 (and thus False) is True."""
     if isinstance(expr, PyreNumber) and expr.value == 0:
         return False
     return True
 
 def pyre_call(expr, args):
+    """Implements the call operator via the __call__ special method.
+       This is expected to return a *Python* callable."""
     return pyre_getattr(expr, '__call__')(*args)
 
 def pyre_getattr(expr, attr):
+    """Implements the dot operator. It first attempts to find the __getallattr__ method,
+       Which is called to find any attribute. Then, it checks the object's dictionary
+       and then if the attribute is not found their, it calls the __getattr__ method."""
     if pyre_hasattr(expr, '__getallattr__'):
         return pyre_call(expr.dict['__getallattr__'], attr)
     elif pyre_hasattr(expr, attr):
@@ -31,16 +41,19 @@ def pyre_getattr(expr, attr):
             'object "%s" has no attribute "%s"!' % (expr, attr))
 
 def pyre_hasattr(expr, attr):
+    """Checks if an attribute exists in an objects dictionary."""
     return attr in expr.dict
 
 class _empty: pass
 
 def pyre_to_py_val(expr):
-    if expr is Pyre_TRUE:
+    """Convert a Pyre value to a Python one. Has direct conversion for some types
+       It then falls back to constructing a object."""
+    if expr == PyreNumber(1):
         return True
-    elif expr is Pyre_FALSE:
+    elif expr == PyreNumber(0):
         return False
-    elif expr if Pyre_NONE:
+    elif expr is Pyre_NONE:
         return None
     elif isinstance(expr, PyreNumber):
         if int(expr.value) == expr.value:
@@ -64,9 +77,11 @@ def pyre_to_py_val(expr):
         return obj
 
 def pyre_to_pyre_val(val):
+    """Convert a Python value to a Python one. Has direct conversion for some types
+       It then falls back to constructing a PyreObject."""
     if callable(val):
-        def _wrapper(*args):
-            return pyre_to_pyre_val(val(*list(map(pyre_to_py_val, args))))
+        def _wrapper(*args, **kwargs):
+            return pyre_to_pyre_val(val(*list(map(pyre_to_py_val, args)), **kwargs))
         return PyrePyFunc(_wrapper)
     elif val is True:
         return Pyre_TRUE
@@ -91,14 +106,27 @@ def pyre_to_pyre_val(val):
             obj._setattr(PyreString(name), pyre_to_pyre_val(val))
         return obj
 
-class PyreEmptyFunc:
 
+        
+class MappingDict(dict):
+    """A dictionary that *lazily* maps all values by a function.
+       TODO: This probably exists somewhere in the stdlib."""
+    def __init__(self, func, vals):
+        super().__init__()
+        self.func = func
+        self.update(vals)
+        
+    def __getitem__(self, key):
+        return self.func(super().__getitem__(key))
+
+class PyreEmptyFunc:
+    """A Pyre function that is *not* a PyreObject (to prevent infinite recursive data structures.)"""
     def __init__(self, func):
         self.dict = {}
         self.dict['__call__'] = func
 
 class PyrePyFunc:
-
+    """A Pyre fuction that is (for most purposes) a PyreObject."""
     def __init__(self, func):
         self.func = func
         self.dict = {}
@@ -145,8 +173,10 @@ class PyrePyFunc:
     def _getattr(self, name):
         return self.dict[name.value]
 
+
 class PyreObject:
 
+    """Pyre's base object."""
     def __init__(self):
         self.dict = {}
         self.dict['setattr'] = PyrePyFunc(self._setattr)
@@ -186,12 +216,16 @@ class PyreObject:
 
     def _getattr(self, name):
         return self.dict[name.value]
+       
+Pyre_NONE = PyreObject()
 
 class PyreModule(PyreObject):
+    """An object to represent a module in Pyre."""
     pass
 
 
 class PyreBuffer(PyreObject):
+    """A Pyre object that represents any Python object that has read, write and close methods."""
     def __init__(self, value):
         super().__init__()
         self.eq_vars.append('value')
@@ -215,7 +249,7 @@ class PyreBuffer(PyreObject):
         self.value.close()
 
 class PyreBytes(PyreObject):
-
+    """A Pyre object that represents a Python bytes object."""
     def __init__(self, value):
         super().__init__()
         self.value = value
@@ -245,7 +279,7 @@ class PyreBytes(PyreObject):
         return str(self.value)
 
 class PyreString(PyreObject):
-
+    """A Pyre object that represents a Python unicode string object."""
     def __init__(self, value):
         super().__init__()
         self.value = value
@@ -265,10 +299,10 @@ class PyreString(PyreObject):
         return PyreString(self.value + other.value)
 
     def rep(self, times):
-        return PyreString(self.value * int(times.value))
+        return PyreString(pyre_to_py_val(self) * int(times.value))
 
     def split(self, sep):
-        return PyreList([PyreString(x) for x in self.value.split(sep.value)])
+        return PyreList([PyreString(x) for x in pyre_to_py_val(self).split(pyre_to_py_val(sep))])
 
     def num(self):
         return PyreNumber(float(self.value))
@@ -283,7 +317,7 @@ class PyreString(PyreObject):
         return PyreBytes(self.value.encode())
 
 class PyreList(PyreObject):
-
+    """A a Pyre object that represents a mutable Python list."""
     def __init__(self, values):
         super().__init__()
         self.values = values
@@ -297,10 +331,20 @@ class PyreList(PyreObject):
         self.dict['len'] = PyrePyFunc(self.len)
         self.dict['filter'] = PyrePyFunc(self.filter)
         self.dict['reverse'] = PyrePyFunc(self.reverse)
-        self.dict['__iter__'] = PyrePyFunc(lambda: self.values)
+        self.dict['__iter__'] = PyrePyFunc(self.iter)
         self.dict['index'] = PyrePyFunc(self.index)
         self.dict['take'] = PyrePyFunc(self.take)
         self.dict['drop'] = PyrePyFunc(self.drop)
+
+    def iter(self):
+        i = -1
+        def _next():
+            nonlocal i
+            i += 1
+            if i >= len(self.values):
+                raise Exception("stopiter")
+            return self.values[i]
+        return PyrePyFunc(_next)
 
     def take(self, num):
         return PyreList(self.values[:int(num.value)])
@@ -347,7 +391,7 @@ class PyreList(PyreObject):
         return "[%s]" % (', '.join(map(str, self.values)))
 
 class PyreNumber(PyreObject):
-
+    """A Pyre object that represents a Python integer or floating point."""
     def __init__(self, value):
         super().__init__()
         self.value = value
@@ -433,4 +477,3 @@ class PyreNumber(PyreObject):
 
 Pyre_TRUE = PyreNumber(1)
 Pyre_FALSE = PyreNumber(0)
-Pyre_NONE = PyreObject()
