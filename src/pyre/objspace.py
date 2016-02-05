@@ -106,7 +106,10 @@ def pyre_to_pyre_val(val):
             obj._setattr(PyreString(name), pyre_to_pyre_val(val))
         return obj
 
-
+def pyre_iter_from_py_iter(ite):
+    obj = PyreObject()
+    obj.dict['__iter__'] = PyrePyFunc(lambda: PyrePyFunc(ite.__next__))
+    return obj
         
 class MappingDict(dict):
     """A dictionary that *lazily* maps all values by a function.
@@ -335,6 +338,14 @@ class PyreList(PyreObject):
         self.dict['index'] = PyrePyFunc(self.index)
         self.dict['take'] = PyrePyFunc(self.take)
         self.dict['drop'] = PyrePyFunc(self.drop)
+        self.dict['enumerate'] = PyrePyFunc(self.enumerate)
+        
+    def enumerate(self):
+        return pyre_iter_from_py_iter(self._enumerate())
+        
+    def _enumerate(self):
+        for i, value in enumerate(self.values):
+            yield PyreList([PyreNumber(i), value])
 
     def iter(self):
         i = -1
