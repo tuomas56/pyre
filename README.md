@@ -2,7 +2,7 @@
 
 A Pythonic, expression-oriented language implemented in Python.
 
-##Install
+## Install
 
 Standard install:
 
@@ -16,7 +16,7 @@ If you are developing the module:
 python3 setup.py develop
 ```
 
-##Usage
+## Usage
 
 ```
 usage: ipyre [-h] [-a {repl,stdin,load}] [-f FILE]
@@ -30,7 +30,7 @@ optional arguments:
   	the file to load
 ```
 
-##The current state of Pyre
+## The current state of Pyre
 
 Done:
 
